@@ -1,1 +1,1 @@
-# pyblog
+# GitBlog

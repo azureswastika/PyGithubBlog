@@ -6,28 +6,28 @@ try:
 except ImportError:
     from distutils.core import setup
 
-with open("pyblog/__init__.py", encoding="utf-8") as f:
+with open("gitblog/__init__.py", encoding="utf-8") as f:
     version = search(r"__version__ = '(.*?)'", f.read()).group(1)
 
 BASE_DIR = Path(__file__).parent
 README = BASE_DIR.joinpath("README.md").read_text(encoding="utf-8")
 
 setup(
-    name="blog.py",
+    name="GitBlog",
     version=version,
-    description="pyblog",
+    description="GitBlog",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/azureswastika/pyblog",
-    download_url="https://github.com/azureswastika/pyblog/archive/{}.tar.gz".format(
+    url="https://github.com/azureswastika/GitBlog",
+    download_url="https://github.com/azureswastika/GitBlog/archive/{}.tar.gz".format(
         version
     ),
     author="azureswastika",
     license="MIT license",
-    packages=["pyblog"],
-    keywords=["pyblog"],
+    packages=["GitBlog"],
+    keywords=["GitBlog"],
     classifiers=[
-        "Development Status :: 1 - Planning",
+        "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
@@ -38,7 +38,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
     ],
-    entry_points={"console_scripts": ["pyblog = pyblog.__init__:main"]},
+    entry_points={"console_scripts": ["gitblog = GitBlog.__init__:main"]},
     install_requires=["bs4", "jinja2", "markdown"],
     python_requires=">=3.5",
 )
