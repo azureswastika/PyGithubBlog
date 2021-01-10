@@ -21,7 +21,7 @@ class PathDescriptor:
         self.name = name
 
 
-class GitBlog:
+class GithubBlog:
     templates = PathDescriptor()
     blog = PathDescriptor()
     data = PathDescriptor()
@@ -130,7 +130,7 @@ def main() -> None:
         "-p", "--pagination", default="pagination.html", type=str, nargs="?"
     )
     args = parser.parse_args()
-    blog = GitBlog(args.templates, args.blog, args.data, args.file, args.pagination)
+    blog = GithubBlog(args.templates, args.blog, args.data, args.file, args.pagination)
     blog.create_pages()
 
 
