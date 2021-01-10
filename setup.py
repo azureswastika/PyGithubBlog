@@ -38,7 +38,7 @@ setup(
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3 :: Only",
     ],
-    entry_points={"console_scripts": ["gitblog = GitBlog.__init__:main"]},
+    entry_points={"console_scripts": ["gitblog = gitblog.__init__:main"]},
     install_requires=["bs4", "jinja2", "markdown"],
     python_requires=">=3.5",
 )
