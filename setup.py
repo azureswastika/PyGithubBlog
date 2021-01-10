@@ -13,9 +13,9 @@ BASE_DIR = Path(__file__).parent
 README = BASE_DIR.joinpath("README.md").read_text(encoding="utf-8")
 
 setup(
-    name="GitBlog",
+    name="gitblog",
     version=version,
-    description="GitBlog",
+    description="gitblog",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/azureswastika/GitBlog",
@@ -25,7 +25,7 @@ setup(
     author="azureswastika",
     license="MIT license",
     packages=["gitblog"],
-    keywords=["GitBlog"],
+    keywords=["gitblog"],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: MIT License",
