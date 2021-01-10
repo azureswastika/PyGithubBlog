@@ -13,19 +13,19 @@ BASE_DIR = Path(__file__).parent
 README = BASE_DIR.joinpath("README.md").read_text(encoding="utf-8")
 
 setup(
-    name="GithubBlog",
+    name="PyGithubBlog",
     version=version,
-    description="GithubBlog",
+    description="PyGithubBlog",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/azureswastika/GithubBlog",
-    download_url="https://github.com/azureswastika/GithubBlog/archive/{}.tar.gz".format(
+    url="https://github.com/azureswastika/PyGithubBlog",
+    download_url="https://github.com/azureswastika/PyGithubBlog/archive/{}.tar.gz".format(
         version
     ),
     author="azureswastika",
     license="MIT license",
     packages=["gitblog"],
-    keywords=["GithubBlog"],
+    keywords=["PyGithubBlog", "Github", "Git", "Blog"],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "License :: OSI Approved :: MIT License",
