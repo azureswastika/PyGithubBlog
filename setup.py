@@ -24,7 +24,7 @@ setup(
     ),
     author="azureswastika",
     license="MIT license",
-    packages=["GithubBlog"],
+    packages=["gitblog"],
     keywords=["GithubBlog"],
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
