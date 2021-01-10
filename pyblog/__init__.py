@@ -1,3 +1,3 @@
-from pyblog import main
+from .pyblog import main
 
 __version__ = '0.0.1'

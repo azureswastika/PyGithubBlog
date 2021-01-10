@@ -13,12 +13,12 @@ BASE_DIR = Path(__file__).parent
 README = BASE_DIR.joinpath("README.md").read_text(encoding="utf-8")
 
 setup(
-    name="pyblog",
+    name="blog.py",
     version=version,
     description="pyblog",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/azureswastika/myconfig",
+    url="https://github.com/azureswastika/pyblog",
     download_url="https://github.com/azureswastika/pyblog/archive/{}.tar.gz".format(
         version
     ),
@@ -39,6 +39,6 @@ setup(
         "Programming Language :: Python :: 3 :: Only",
     ],
     entry_points={"console_scripts": ["pyblog = pyblog.__init__:main"]},
-    install_requires=[],
+    install_requires=["bs4", "jinja2", "markdown"],
     python_requires=">=3.5",
 )

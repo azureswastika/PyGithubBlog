@@ -20,7 +20,7 @@ class PathDescriptor:
         self.name = name
 
 
-class Pyblog:
+class PyBlog:
     templates = PathDescriptor()
     blog = PathDescriptor()
     data = PathDescriptor()
@@ -83,8 +83,8 @@ def main() -> None:
     parser.add_argument("-b", "--blog", default="blog", type=str, nargs="?")
     parser.add_argument("-d", "--data", default="data", type=str, nargs="?")
     args = parser.parse_args()
-    blog = Pyblog(args.templates, args.blog, args.data)
-    print(blog.create_pages())
+    blog = PyBlog(args.templates, args.blog, args.data)
+    blog.create_pages()
 
 
 if __name__ == "__main__":
