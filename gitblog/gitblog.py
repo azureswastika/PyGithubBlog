@@ -1,39 +1,55 @@
-from argparse import ArgumentParser
+from json import load
 from os.path import getctime
 from pathlib import Path
 from random import randint, sample
 from shutil import rmtree
 from string import ascii_letters, punctuation
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
 from jinja2.exceptions import TemplateNotFound
 from markdown import markdown
 
 
-class PathDescriptor:
-    def __set__(self, obj, value):
-        if not value.exists():
-            raise OSError("There is no such folder: {}".format(str(value.absolute())))
-        obj.__dict__[self.name] = value
-
-    def __set_name__(self, owner, name):
-        self.name = name
-
-
 class GithubBlog:
+    class Config:
+        def __init__(self) -> None:
+            try:
+                with open("config.json", encoding="utf-8") as file:
+                    self._ = load(file)
+            except FileNotFoundError:
+                self._ = dict()
+            self._.setdefault("templates", "templates")
+            self._.setdefault("blog", "blog")
+            self._.setdefault("data", "data")
+            self._.setdefault("page", "page.html")
+            self._.setdefault("pagination", "pagination.html")
+            self._.setdefault("max_pagination", 10)
+
+        def __getattr__(self, key) -> Any:
+            return self._.get(key, None)
+
+    class PathDescriptor:
+        def __set__(self, obj, value):
+            if not value.exists():
+                raise OSError("There is no such folder: {}".format(str(value.absolute())))
+            obj.__dict__[self.name] = value
+
+        def __set_name__(self, owner, name):
+            self.name = name
+
     templates = PathDescriptor()
     blog = PathDescriptor()
     data = PathDescriptor()
 
-    def __init__(
-        self, templates: str, blog: str, data: str, page: str, pagination: str
-    ) -> None:
-        self.templates = Path(templates)
-        self.blog = Path(blog)
-        self.data = Path(data)
-        self.page = page
-        self.pagination = pagination
+    def __init__(self) -> None:
+        config = self.Config()
+        self.templates = Path(config.templates)
+        self.blog = Path(config.blog)
+        self.data = Path(config.data)
+        self.page = config.page
+        self.pagination = config.pagination
+        self.max_pagination = config.max_pagination
         self.loader = FileSystemLoader(self.templates)
         self.env = Environment(loader=self.loader)
 
@@ -61,15 +77,17 @@ class GithubBlog:
                     self.blog.joinpath("{}.html".format(title)), "w", encoding="utf-8"
                 ) as file:
                     file.write(html)
+                print("Created: {}.html".format(title))
                 pagination_data.append(
                     {
                         "html": item["html"],
                         "link": "../" + "{}.html".format(title),
                     }
                 )
-                if len(pagination_data) == 10 or len(data) == index + 1:
+                if len(pagination_data) == self.max_pagination or len(data) == index + 1:
                     self.create_pagination(pagination_data)
                     pagination_data = list()
+            print("PyGithubBlog created pages")
 
     def create_pagination(self, content: List[Dict[str, str]]) -> None:
         try:
@@ -91,10 +109,11 @@ class GithubBlog:
                 encoding="utf-8",
             ) as file:
                 file.write(html)
+            print("Created: page/{}.html".format(num + 1))
 
     def process_title(self, title: str) -> str:
         if title == "":
-            title = "".join(sample(ascii_letters, randint(5, 20)))
+            title = "".join(sample(ascii_letters, randint(3, 10)))
         if self.blog.joinpath("{}.html".format(title)).exists():
             title += "".join(sample(ascii_letters, randint(1, 3)))
             self.process_title(title)
@@ -121,16 +140,7 @@ class GithubBlog:
 
 
 def main() -> None:
-    parser = ArgumentParser()
-    parser.add_argument("-t", "--templates", default="templates", type=str, nargs="?")
-    parser.add_argument("-b", "--blog", default="blog", type=str, nargs="?")
-    parser.add_argument("-d", "--data", default="data", type=str, nargs="?")
-    parser.add_argument("-f", "--file", default="page.html", type=str, nargs="?")
-    parser.add_argument(
-        "-p", "--pagination", default="pagination.html", type=str, nargs="?"
-    )
-    args = parser.parse_args()
-    blog = GithubBlog(args.templates, args.blog, args.data, args.file, args.pagination)
+    blog = GithubBlog()
     blog.create_pages()
 
 
