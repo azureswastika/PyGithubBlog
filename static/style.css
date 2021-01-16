@@ -26,7 +26,7 @@ body {
 }
 
 .form-switch {
-  margin-left: 100%;
+  float: right;
 }
 
 #flexSwitchCheckDefault {
