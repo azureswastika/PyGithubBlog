@@ -15,8 +15,8 @@ class GithubBlog:
     class Config:
         def __init__(self) -> None:
             try:
-                with open("config.json", encoding="utf-8") as file:
-                    self._ = load(file)
+                file = open("config.json", encoding="utf-8")
+                self._ = load(file)
             except FileNotFoundError:
                 self._ = dict()
             self._.setdefault("templates", "templates")
@@ -32,7 +32,9 @@ class GithubBlog:
     class PathDescriptor:
         def __set__(self, obj, value):
             if not value.exists():
-                raise OSError("There is no such folder: {}".format(str(value.absolute())))
+                raise OSError(
+                    "There is no such folder: {}".format(str(value.absolute()))
+                )
             obj.__dict__[self.name] = value
 
         def __set_name__(self, owner, name):
@@ -73,10 +75,13 @@ class GithubBlog:
             for index, item in enumerate(data):
                 html = page.render(title=item["title"], content=item["html"])
                 title = self.process_title(item["title"])
-                with open(
-                    self.blog.joinpath("{}.html".format(title)), "w", encoding="utf-8"
-                ) as file:
-                    file.write(html)
+                file = open(
+                    str(self.blog.joinpath("{}.html".format(title))),
+                    "w",
+                    encoding="utf-8",
+                )
+                file.write(html)
+                file.close()
                 print("Created: {}.html".format(title))
                 pagination_data.append(
                     {
@@ -84,7 +89,10 @@ class GithubBlog:
                         "link": "../" + "{}.html".format(title),
                     }
                 )
-                if len(pagination_data) == self.max_pagination or len(data) == index + 1:
+                if (
+                    len(pagination_data) == self.max_pagination
+                    or len(data) == index + 1
+                ):
                     self.create_pagination(pagination_data)
                     pagination_data = list()
             print("PyGithubBlog created pages")
@@ -103,12 +111,13 @@ class GithubBlog:
             if not self.blog.joinpath("page").exists():
                 self.blog.joinpath("page").mkdir()
             num = len([file for file in self.blog.joinpath("page").glob("*")])
-            with open(
-                self.blog.joinpath("page/{}.html".format(num + 1)),
+            file = open(
+                str(self.blog.joinpath("page/{}.html".format(num + 1))),
                 "w",
                 encoding="utf-8",
-            ) as file:
-                file.write(html)
+            )
+            file.write(html)
+            file.close()
             print("Created: page/{}.html".format(num + 1))
 
     def process_title(self, title: str) -> str:
@@ -133,7 +142,9 @@ class GithubBlog:
         ]
 
     def get_text(self) -> List[str]:
-        return [open(path, encoding="utf-8").read() for path in self.get_markdown()]
+        return [
+            open(str(path), encoding="utf-8").read() for path in self.get_markdown()
+        ]
 
     def get_markdown(self) -> List[str]:
         return sorted([file for file in self.data.glob("*.md")], key=getctime)[::-1]
