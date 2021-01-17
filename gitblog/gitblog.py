@@ -1,9 +1,11 @@
 from json import load
+from os import PathLike
 from os.path import getctime
 from pathlib import Path
 from random import randint, sample
 from shutil import rmtree
 from string import ascii_letters, punctuation
+from time import localtime, strftime
 from typing import Any, Dict, List
 
 from jinja2 import Environment, FileSystemLoader
@@ -25,6 +27,7 @@ class GithubBlog:
             self._.setdefault("page", "page.html")
             self._.setdefault("pagination", "pagination.html")
             self._.setdefault("max_pagination", 10)
+            self._.setdefault("dateformat", "%H:%M %d.%m.%Y")
 
         def __getattr__(self, key) -> Any:
             return self._.get(key, None)
@@ -32,9 +35,7 @@ class GithubBlog:
     class PathDescriptor:
         def __set__(self, obj, value):
             if not value.exists():
-                raise OSError(
-                    "There is no such folder: {}".format(str(value.absolute()))
-                )
+                raise OSError("There is no such folder: {}".format(str(value.absolute())))
             obj.__dict__[self.name] = value
 
         def __set_name__(self, owner, name):
@@ -52,16 +53,18 @@ class GithubBlog:
         self.page = config.page
         self.pagination = config.pagination
         self.max_pagination = config.max_pagination
+        self.dateformat = config.dateformat
         self.loader = FileSystemLoader(self.templates)
         self.env = Environment(loader=self.loader)
 
-    def create_pages(self) -> None:
-        pagination_data = list()
         for file in [file for file in self.blog.glob("*")]:
             if file.is_file():
                 file.unlink()
                 continue
             rmtree(file)
+
+    def create_pages(self) -> None:
+        pagination_data = list()
         try:
             page = self.env.get_template(self.page)
         except TemplateNotFound:
@@ -89,10 +92,7 @@ class GithubBlog:
                         "link": "../" + "{}.html".format(title),
                     }
                 )
-                if (
-                    len(pagination_data) == self.max_pagination
-                    or len(data) == index + 1
-                ):
+                if len(pagination_data) == self.max_pagination or len(data) == index + 1:
                     self.create_pagination(pagination_data)
                     pagination_data = list()
             print("PyGithubBlog created pages")
@@ -135,18 +135,23 @@ class GithubBlog:
     def markdown2html(self) -> List[Dict[str, str]]:
         return [
             {
-                "title": text.split("\n")[0].strip("#").strip(),
-                "html": markdown(text, extensions=["fenced_code"]),
+                "title": path.get("text").split("\n")[0].strip("#").strip(),
+                "html": markdown(path.get("text"), extensions=["fenced_code"]),
+                "date": strftime(self.dateformat, localtime(getctime(path.get("path")))),
             }
-            for text in self.get_text()
+            for path in self.get_text()
         ]
 
-    def get_text(self) -> List[str]:
+    def get_text(self) -> List[Dict[str, Any]]:
         return [
-            open(str(path), encoding="utf-8").read() for path in self.get_markdown()
+            {
+                "path": path,
+                "text": open(str(path), encoding="utf-8").read(),
+            }
+            for path in self.get_markdown()
         ]
 
-    def get_markdown(self) -> List[str]:
+    def get_markdown(self) -> List[PathLike]:
         return sorted([file for file in self.data.glob("*.md")], key=getctime)[::-1]
 
 
