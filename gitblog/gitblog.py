@@ -1,4 +1,5 @@
 from json import load
+from json.decoder import JSONDecodeError
 from os import PathLike
 from os.path import getctime
 from pathlib import Path
@@ -13,55 +14,106 @@ from jinja2.exceptions import TemplateNotFound
 from markdown import markdown
 
 
-class GithubBlog:
-    class Config:
-        def __init__(self) -> None:
-            try:
-                file = open("config.json", encoding="utf-8")
-                self._ = load(file)
-            except FileNotFoundError:
-                self._ = dict()
-            self._.setdefault("templates", "templates")
-            self._.setdefault("blog", "blog")
-            self._.setdefault("data", "data")
-            self._.setdefault("page", "page.html")
-            self._.setdefault("pagination", "pagination.html")
-            self._.setdefault("max_pagination", 10)
-            self._.setdefault("dateformat", "%H:%M %d.%m.%Y")
+class Singleton(type):
+    _instances = {}
 
-        def __getattr__(self, key) -> Any:
-            return self._.get(key, None)
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(Singleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]
 
-    class PathDescriptor:
-        def __set__(self, obj, value):
-            if not value.exists():
-                raise OSError("There is no such folder: {}".format(str(value.absolute())))
-            obj.__dict__[self.name] = value
 
-        def __set_name__(self, owner, name):
-            self.name = name
+class PathDescriptor:
+    def __set__(self, obj, value):
+        if not value.exists():
+            raise OSError("There is no such folder: {}".format(str(value.absolute())))
+        obj.__dict__[self.name] = value
 
+    def __set_name__(self, owner, name):
+        self.name = name
+
+
+class Config(metaclass=Singleton):
     templates = PathDescriptor()
     blog = PathDescriptor()
     data = PathDescriptor()
 
     def __init__(self) -> None:
-        config = self.Config()
-        self.templates = Path(config.templates)
-        self.blog = Path(config.blog)
-        self.data = Path(config.data)
+        self.__dict__.setdefault("page", "page.html")
+        self.__dict__.setdefault("pagination", "pagination.html")
+        self.__dict__.setdefault("max_pagination", 10)
+        self.__dict__.setdefault("dateformat", "%H:%M %d.%m.%Y")
+        self.parser()
+        if "templates" not in self.__dict__.keys():
+            self.__setattr__("templates", Path("templates"))
+        if "blog" not in self.__dict__.keys():
+            self.__setattr__("blog", Path("blog"))
+        if "data" not in self.__dict__.keys():
+            self.__setattr__("data", Path("data"))
+
+    def __getattr__(self, key: str) -> Any:
+        return self.__dict__.get(key, None)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name in ["templates", "blog", "data"]:
+            return super().__setattr__(name, Path(value))
+        return super().__setattr__(name, value)
+
+    def parser(self):
+        try:
+            f = open("config.json", encoding="utf-8")
+            file_data = load(f)
+        except (JSONDecodeError, FileNotFoundError):
+            pass
+        else:
+            for key in file_data.keys():
+                self.__setattr__(key.replace("-", "_"), file_data[key])
+            f.close()
+
+
+class File:
+    def __init__(self, path=None) -> None:
+        config = Config()
+        self.path = path
+        self.markdown = open(str(self.path), "r", encoding="utf-8").read()
+        self.title = self.markdown.split("\n")[0].strip("#").strip()
+        self.html = markdown(self.markdown, extensions=["fenced_code"])
+        self.filename = self.process_title(self.title)
+        self.link = "../" + "{}.html".format(self.filename)
+        self.date = strftime(config.dateformat, localtime(getctime(self.path)))
+
+    def process_title(self, title: str) -> str:
+        config = Config()
+        if title == "":
+            title = "".join(sample(ascii_letters, randint(3, 10)))
+        if config.blog.joinpath("{}.html".format(title)).exists():
+            title += "".join(sample(ascii_letters, randint(1, 3)))
+            self.process_title(title)
+        for el in punctuation:
+            if el in title:
+                title = title.replace(el, "_")
+        return title.lower()
+
+
+class GithubBlog:
+    def __init__(self) -> None:
+        config = Config()
+        self.templates = config.templates
+        self.blog = config.blog
+        self.data = config.data
         self.page = config.page
         self.pagination = config.pagination
         self.max_pagination = config.max_pagination
         self.dateformat = config.dateformat
         self.loader = FileSystemLoader(self.templates)
         self.env = Environment(loader=self.loader)
-
         for file in [file for file in self.blog.glob("*")]:
             if file.is_file():
                 file.unlink()
                 continue
             rmtree(file)
+
+        self.create_pages()
 
     def create_pages(self) -> None:
         pagination_data = list()
@@ -74,24 +126,17 @@ class GithubBlog:
                 )
             )
         else:
-            data = self.markdown2html()
+            data = self.get_markdown()
             for index, item in enumerate(data):
-                html = page.render(title=item["title"], content=item["html"])
-                title = self.process_title(item["title"])
+                html = page.render(title=item.title, content=item.html)
                 file = open(
-                    str(self.blog.joinpath("{}.html".format(title))),
+                    str(self.blog.joinpath("{}.html".format(item.filename))),
                     "w",
                     encoding="utf-8",
                 )
                 file.write(html)
                 file.close()
-                print("Created: {}.html".format(title))
-                pagination_data.append(
-                    {
-                        "html": item["html"],
-                        "link": "../" + "{}.html".format(title),
-                    }
-                )
+                pagination_data.append(item)
                 if len(pagination_data) == self.max_pagination or len(data) == index + 1:
                     self.create_pagination(pagination_data)
                     pagination_data = list()
@@ -118,46 +163,14 @@ class GithubBlog:
             )
             file.write(html)
             file.close()
-            print("Created: page/{}.html".format(num + 1))
-
-    def process_title(self, title: str) -> str:
-        if title == "":
-            title = "".join(sample(ascii_letters, randint(3, 10)))
-        if self.blog.joinpath("{}.html".format(title)).exists():
-            title += "".join(sample(ascii_letters, randint(1, 3)))
-            self.process_title(title)
-        for el in punctuation:
-            if el in title:
-                title = title.replace(el, "_")
-
-        return title.lower()
-
-    def markdown2html(self) -> List[Dict[str, str]]:
-        return [
-            {
-                "title": path.get("text").split("\n")[0].strip("#").strip(),
-                "html": markdown(path.get("text"), extensions=["fenced_code"]),
-                "date": strftime(self.dateformat, localtime(getctime(path.get("path")))),
-            }
-            for path in self.get_text()
-        ]
-
-    def get_text(self) -> List[Dict[str, Any]]:
-        return [
-            {
-                "path": path,
-                "text": open(str(path), encoding="utf-8").read(),
-            }
-            for path in self.get_markdown()
-        ]
 
     def get_markdown(self) -> List[PathLike]:
-        return sorted([file for file in self.data.glob("*.md")], key=getctime)[::-1]
+        files = sorted([file for file in self.data.glob("*.md")], key=getctime)[::-1]
+        return [File(path) for path in files]
 
 
 def main() -> None:
-    blog = GithubBlog()
-    blog.create_pages()
+    GithubBlog()
 
 
 if __name__ == "__main__":
